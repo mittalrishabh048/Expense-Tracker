@@ -1,11 +1,32 @@
 # Expense Tracker
+import os
+import json
 
+FILE_NAME = "expenses.json"
 ExpensesList=[]
 print("=======================================================================")
 print("                      Welcome to Expense Tracker                       ")
 print("=======================================================================")
 
+# --- STARTUP PERSISTENCE ENGINE ---
+# Check if the data file exists on disk
+if not os.path.exists(FILE_NAME):
+    print(f"[Notice] No data file found. Creating a fresh storage workspace.")
+    ExpensesList = []
+else:
+    # Try loading the existing data, protecting against file corruption
+    try:
+        with open(FILE_NAME, "r") as file:
+            ExpensesList = json.load(file)
+        print(f"[Success] Loaded {len(ExpensesList)} data records from storage.")
+    except json.JSONDecodeError:
+        print("\n===============================================================")
+        print("[CRITICAL WARNING] 'expenses.json' is corrupted or unreadable!")
+        print("To protect the session, the program will load an empty tracker.")
+        print("===============================================================")
+        ExpensesList = []
 
+# --- MAIN APPLICATION LOOP ---
 while True:
     print("====MENU====")
     print("1.Add Expense")
@@ -53,7 +74,11 @@ while True:
             "Amount": Amount
         }
         ExpensesList.append(expense)
-        print("\n>> Expense Added Successfully! <<")
+        # --- AUTOMATIC AUTO-SAVE HOOK ---
+        with open(FILE_NAME, "w") as file:
+            json.dump(ExpensesList, file, indent=4)
+            
+        print("\n>> Expense Added & Saved Successfully to Disk! <<")
 
 # VIEW YOUR EXPENSES (Tabular Grid System)
     elif choice == 2:
