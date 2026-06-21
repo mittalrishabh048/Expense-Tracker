@@ -1,57 +1,104 @@
 # Expense Tracker
 
 ExpensesList=[]
-print("Welcome to Expense Tracker:")
+print("=======================================================================")
+print("                      Welcome to Expense Tracker                       ")
+print("=======================================================================")
+
+
 while True:
     print("====MENU====")
     print("1.Add Expense")
     print("2.View All Expenses")
     print("3.View Total Spending")
     print("4.Exit")
-
-    choice=int(input("Please Enter Your Choice:"))
+    print("===============")
+    
+    # Secure Choice Validation
+    raw_choice = input("Please Enter Your Choice: ").strip()
+    
+    if not raw_choice.isdigit():
+        print("\n[Error] Invalid Input! Please enter a number (1-4).")
+        continue
+        
+    choice = int(raw_choice)
 
 # ADD EXPENSE:
-    if(choice==1):
-        Date=input("Enter The Date On which you spent:")
-        Category=input("What Type Of expense you've made(food,travel,shopping,etc.):")
-        Description=input("Describe your spending(optional):")
-        Amount=float(input("How much you've spent:Rs."))
+    if choice == 1:
+        print("\n--- Add New Expense ---")
+        Date = input("Enter The Date on which you spent (YYYY-MM-DD): ").strip()
+        Category = input("What Type of expense you've made (food, travel, shopping, etc.): ").strip()
+        
+        # Smart Default for Description
+        Description = input("Describe your spending (optional): ").strip()
+        if not Description:
+            Description = "No Description"
+            
+        # Secure Amount Validation Loop
+        while True:
+            raw_amount = input("How much you've spent: Rs.").strip()
+            try:
+                Amount = float(raw_amount)
+                if Amount <= 0:
+                    print("[Error] Amount must be greater than zero. Please try again.")
+                    continue
+                break  # Valid amount received, break validation loop
+            except ValueError:
+                print("[Error] Invalid amount! Please enter a valid decimal number.")
 
-        expense={
-            "Date":Date,
-            "Category":Category,
-            "Description":Description,
-            "Amount":Amount
+        expense = {
+            "Date": Date,
+            "Category": Category,
+            "Description": Description,
+            "Amount": Amount
         }
         ExpensesList.append(expense)
-        print("\nExpense Added Successfully.\n")
+        print("\n>> Expense Added Successfully! <<")
 
-# VIEW YOUR EXPENSES:
-    elif(choice==2):
-        if(len(ExpensesList)==0):
-            print("No Expenses.")
+# VIEW YOUR EXPENSES (Tabular Grid System)
+    elif choice == 2:
+        if len(ExpensesList) == 0:
+            print("\n[Notice] No Expenses recorded yet.")
         else:
-            print("\n====YOUR EXPENSES====")
-            count=1
+            print("\n=======================================================================")
+            print("                            YOUR EXPENSES                              ")
+            print("=======================================================================")
+            
+            # Print Table Header
+            header_str = f"{'No.':<5}│ {'Date':<12}│ {'Category':<15}│ {'Description':<25}│ {'Amount':>12}"
+            print(header_str)
+            print("─────┼─────────────┼────────────────┼──────────────────────────┼────────────")
+            
+            # Print Table Rows
+            count = 1
             for EachExpense in ExpensesList:
-                print(f"Expense Number {count}=>{EachExpense["Date"]},{EachExpense["Category"]},{EachExpense["Description"]},{EachExpense["Amount"]}\n")
-                count+=1
-    
-# VIEW TOTAL SPENDINGS:
-    elif(choice==3):
-        if(len(ExpensesList)==0):
-            print("Zero Spendings.")
+                # Clip description string if it's too long to prevent text wrapping breaks
+                desc = EachExpense['Description']
+                if len(desc) > 23:
+                    desc = desc[:20] + "..."
+                    
+                print(f"{count:<5}│ {EachExpense['Date']:<12}│ {EachExpense['Category']:<15}│ {desc:<25}│ Rs.{EachExpense['Amount']:>9.2f}")
+                count += 1
+                
+            print("=======================================================================")
+   
+
+#  VIEW TOTAL SPENDINGS
+    elif choice == 3:
+        if len(ExpensesList) == 0:
+            print("\n[Notice] Zero Spendings.")
         else:
-            total=0
+            total = 0.0
             for EachExpenses in ExpensesList:
-                total=total+EachExpenses["Amount"]
+                total += EachExpenses["Amount"]
+            print("\n========================================")
+            print(f" Total Spendings: Rs.{total:.2f}")
+            print("========================================")
 
-            print("Total Spendings:",total)
-
-# EXIT
-    elif(choice==4):
-        print("Thank You For Using Expense Tracker.")
+#  EXIT
+    elif choice == 4:
+        print("\nThank You For Using Expense Tracker. Goodbye!")
         break
+        
     else:
-        print("Invalid Choice!! Try Again.")
+        print("\n[Error] Invalid Choice!! Please select an option between 1 and 4.")
