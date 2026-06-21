@@ -10,5 +10,23 @@
         "Category": "food",
         "Description": "No Description",
         "Amount": 500.0
+    },
+    {
+        "Date": "2026-05-21",
+        "Category": "other",
+        "Description": "No Description",
+        "Amount": 50000.0
+    },
+    {
+        "Date": "2026-06-04",
+        "Category": "shopping",
+        "Description": "bought new phone",
+        "Amount": 22000.0
+    },
+    {
+        "Date": "2026-05-07",
+        "Category": "food",
+        "Description": "No Description",
+        "Amount": 100.0
     }
 ]

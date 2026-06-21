@@ -32,7 +32,8 @@ while True:
     print("1.Add Expense")
     print("2.View All Expenses")
     print("3.View Total Spending")
-    print("4.Exit")
+    print("4. View Expense Analytics  <-- [NEW]")
+    print("5.Exit")
     print("===============")
     
     # Secure Choice Validation
@@ -48,7 +49,7 @@ while True:
     if choice == 1:
         print("\n--- Add New Expense ---")
         Date = input("Enter The Date on which you spent (YYYY-MM-DD): ").strip()
-        Category = input("What Type of expense you've made (food, travel, shopping, etc.): ").strip()
+        Category = input("What Type of expense you've made (food, travel, shopping, etc.): ").strip().lower()
         
         # Smart Default for Description
         Description = input("Describe your spending (optional): ").strip()
@@ -120,8 +121,74 @@ while True:
             print(f" Total Spendings: Rs.{total:.2f}")
             print("========================================")
 
-#  EXIT
+
+# 4. VIEW EXPENSE ANALYTICS:
     elif choice == 4:
+        # Edge-case check to prevent math crashes on empty data sets
+        if len(ExpensesList) == 0:
+            print("\n[Notice] No data available to calculate analytics. Try adding an expense first!")
+            continue
+            
+        print("\n==================================================")
+        print("                EXPENSE ANALYTICS                   ")
+        print("====================================================")
+        
+        # --- PHASE 1: BASIC REDUCTIONS & EXTREMUMS ---
+        total_spending = 0.0
+        total_count = len(ExpensesList)
+        
+        # Initializing trackers with the very first item to begin relative scanning
+        highest_expense = ExpensesList[0]
+        lowest_expense = ExpensesList[0]
+        
+        # Temporary dictionary for category grouping logic
+        category_totals = {}
+        
+        for item in ExpensesList:
+            amount = item["Amount"]
+            category = item["Category"]
+            
+            # Accumulate total spending
+            total_spending += amount
+            
+            # Check for absolute maximum spend
+            if amount > highest_expense["Amount"]:
+                highest_expense = item
+                
+            # Check for absolute minimum spend
+            if amount < lowest_expense["Amount"]:
+                lowest_expense = item
+                
+            # --- PHASE 2: DYNAMIC ADVANCED GROUPING ---
+            if category in category_totals:
+                category_totals[category] += amount
+            else:
+                category_totals[category] = amount
+                
+        # Calculate derived average metric
+        average_expense = total_spending / total_count
+        
+        # --- PHASE 3: PRESENTATION RENDER ---
+        print(" Metrics Summary:")
+        print(" ────────────────")
+        print(f" • Total Spending        : Rs.{total_spending:.2f}")
+        print(f" • Total No. of Expenses : {total_count} records")
+        print(f" • Average Expense Cost  : Rs.{average_expense:.2f}")
+        
+        print("\n Extremes:")
+        print(" ─────────")
+        print(f" • Highest Single Spend  : Rs.{highest_expense['Amount']:.2f} ({highest_expense['Category']})")
+        print(f" • Lowest Single Spend   : Rs.{lowest_expense['Amount']:.2f} ({lowest_expense['Category']})")
+        
+        print("\n Category-Wise Breakdown:")
+        print(" ────────────────────────")
+        for cat_name, cat_total in category_totals.items():
+            print(f" ■ {cat_name:<21} : Rs.{cat_total:>9.2f}")
+            
+        print("==================================================")
+
+#  EXIT
+    elif choice == 5:
         print("\nThank You For Using Expense Tracker. Goodbye!")
         break
         
