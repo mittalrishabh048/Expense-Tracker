@@ -51,15 +51,16 @@ while True:
     print("2.View All Expenses")
     print("3.View Total Spending")
     print("4.View Expense Analytics")
-    print("5.Budget Management       <-- [NEW]")
-    print("6.Exit")
+    print("5.Budget Management")
+    print("6.Reporting System        <-- [NEW]")
+    print("7.Exit")
     print("===============")
     
     # Secure Choice Validation
     raw_choice = input("Please Enter Your Choice: ").strip()
     
     if not raw_choice.isdigit():
-        print("\n[Error] Invalid Input! Please enter a number (1-6).")
+        print("\n[Error] Invalid Input! Please enter a number (1-7).")
         continue
         
     choice = int(raw_choice)
@@ -137,16 +138,8 @@ while True:
 
 #  VIEW TOTAL SPENDINGS
     elif choice == 3:
-        if len(ExpensesList) == 0:
-            print("\n[Notice] Zero Spendings.")
-        else:
-            total = 0.0
-            for EachExpenses in ExpensesList:
-                total += EachExpenses["Amount"]
-            print("\n========================================")
-            print(f" Total Spendings: Rs.{total:.2f}")
-            print("========================================")
-
+        total = sum(item["Amount"] for item in ExpensesList)
+        print(f"\n========================================\n Total Spendings: Rs.{total:.2f}\n========================================")
 
 #  VIEW EXPENSE ANALYTICS:
     elif choice == 4:
@@ -250,8 +243,91 @@ while True:
         else:
             print("[Error] Invalid option selected. Returning to menu.")
 
-#  EXIT
+# REPORTING SYSTEM WORKSPACE (Filter & File Export Layout)
     elif choice == 6:
+        if len(ExpensesList) == 0:
+            print("\n[Notice] No data logs found. Add an expense first to build a report.")
+            continue
+            
+        print("\n==================================================")
+        print("                 REPORTING SYSTEM                 ")
+        print("==================================================")
+        print("1. Generate Daily Report")
+        print("2. Generate Monthly Report")
+        report_type = input("\nSelect report filter type (1-2): ").strip()
+        
+        filtered_expenses = []
+        target_label = ""
+        report_title = ""
+        
+        # Choice 6.1: Daily Extraction Slicer
+        if report_type == "1":
+            target_label = input("Enter target date to filter (YYYY-MM-DD): ").strip()
+            report_title = "DAILY EXPENSE REPORT"
+            for item in ExpensesList:
+                if item["Date"] == target_label:
+                    filtered_expenses.append(item)
+                    
+        # Choice 6.2: Monthly Extraction Slicer (Grabs first 7 chars: "YYYY-MM")
+        elif report_type == "2":
+            target_label = input("Enter target month to filter (YYYY-MM): ").strip()
+            report_title = "MONTHLY EXPENSE REPORT"
+            for item in ExpensesList:
+                if item["Date"][:7] == target_label:
+                    filtered_expenses.append(item)
+        else:
+            print("[Error] Invalid option. Returning to core menu loop.")
+            continue
+
+        # Process filtered results
+        if len(filtered_expenses) == 0:
+            print(f"\n[Notice] No database matches found for target window: {target_label}")
+            continue
+            
+        # Compile Report Text Layout using a text lines buffer string
+        report_output = []
+        report_output.append("==================================================")
+        report_output.append(f"              {report_title}               ")
+        report_output.append("==================================================")
+        report_output.append(f" Target Window        : {target_label}")
+        report_output.append(f" Total Items Matched  : {len(filtered_expenses)} records")
+        report_output.append("──────────────────────────────────────────────────")
+        
+        period_total = 0.0
+        cat_breakdown = {}
+        
+        # Aggregate the period metrics
+        for item in filtered_expenses:
+            period_total += item["Amount"]
+            cat_breakdown[item["Category"]] = cat_breakdown.get(item["Category"], 0.0) + item["Amount"]
+            report_output.append(f" • [{item['Date']}] {item['Category']:<10} | {item['Description']:<15} : Rs.{item['Amount']:>8.2f}")
+            
+        report_output.append("──────────────────────────────────────────────────")
+        report_output.append(" Category Summary Breakdown:")
+        for cat, total_amt in cat_breakdown.items():
+            report_output.append(f"   ■ {cat:<15} : Rs.{total_amt:>8.2f}")
+        report_output.append("──────────────────────────────────────────────────")
+        report_output.append(f" TOTAL PERIOD SPEND   : Rs.{period_total:.2f}")
+        report_output.append("==================================================\n")
+        
+        # Render Compiled Text Report straight to the screen terminal layout
+        final_report_text = "\n".join(report_output)
+        print(final_report_text)
+        
+        # --- THE EXPORT HOOK ---
+        export_choice = input("Would you like to export this report to a text file? (y/n): ").strip().lower()
+        if export_choice == "y":
+            # Sanitize a safe clean filename string based on user filter parameters
+            safe_filename = f"report_{target_label.replace('-', '_')}.txt"
+            try:
+                with open(safe_filename, "w", encoding="utf-8") as file:
+                    file.write(final_report_text)
+                print(f"\n[Export Success] Report successfully written onto disk as '{safe_filename}'!")
+            except IOError:
+                print("\n[Error] System disk block error! Unable to write external file.")
+
+#  EXIT
+    elif choice == 7:
         print("\nThank You For Using Expense Tracker. Goodbye!")
         break
         
