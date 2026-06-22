@@ -50,17 +50,18 @@ while True:
     print("1.Add Expense")
     print("2.View All Expenses")
     print("3.View Total Spending")
-    print("4.View Expense Analytics")
-    print("5.Budget Management")
-    print("6.Reporting System        <-- [NEW]")
-    print("7.Exit")
+    print("4.Advanced Search & Filter <-- [NEW]")
+    print("5.View Expense Analytics")
+    print("6.Budget Management")
+    print("7.Reporting System")
+    print("8.Exit")
     print("===============")
     
     # Secure Choice Validation
     raw_choice = input("Please Enter Your Choice: ").strip()
     
     if not raw_choice.isdigit():
-        print("\n[Error] Invalid Input! Please enter a number (1-7).")
+        print("\n[Error] Invalid Input! Please enter a number (1-8).")
         continue
         
     choice = int(raw_choice)
@@ -141,8 +142,76 @@ while True:
         total = sum(item["Amount"] for item in ExpensesList)
         print(f"\n========================================\n Total Spendings: Rs.{total:.2f}\n========================================")
 
-#  VIEW EXPENSE ANALYTICS:
+# ADVANCED SEARCH & FILTERING (Multi-Query Engine Layout)
     elif choice == 4:
+        if len(ExpensesList) == 0:
+            print("\n[Notice] Tracker is empty. Add entries first before filtering.")
+            continue
+            
+        print("\n==================================================")
+        print("            ADVANCED SEARCH ENGINE                ")
+        print("==================================================")
+        print("1. Search By Specific Category")
+        print("2. Search By Description Keyword Sieve")
+        print("3. Search By Custom Amount Range Window")
+        search_type = input("\nSelect a search query pattern (1-3): ").strip()
+        
+        matches = []
+        
+        # 4.1 Category Match Pattern
+        if search_type == "1":
+            target_cat = input("Enter target category name to match: ").strip().lower()
+            for item in ExpensesList:
+                if item["Category"] == target_cat:
+                    matches.append(item)
+                    
+        # 4.2 Loose Substring Keyword Pattern
+        elif search_type == "2":
+            keyword = input("Enter keyword or phrase to scan for: ").strip().lower()
+            for item in ExpensesList:
+                if keyword in item["Description"].lower():
+                    matches.append(item)
+                    
+        # 4.3 Secure Decimal Bounds Evaluation
+        elif search_type == "3":
+            try:
+                min_amt = float(input("Enter minimum threshold amount: Rs.").strip())
+                max_amt = float(input("Enter maximum threshold amount: Rs.").strip())
+                if min_amt > max_amt:
+                    print("[Notice] Swapping values automatically to fix range order bounds.")
+                    min_amt, max_amt = max_amt, min_amt
+                    
+                for item in ExpensesList:
+                    if min_amt <= item["Amount"] <= max_amt:
+                        matches.append(item)
+            except ValueError:
+                print("[Error] Invalid entry! Input numeric values only for range thresholds.")
+                continue
+        else:
+            print("[Error] Unknown query parameter strategy selected.")
+            continue
+
+        # Render Search Grid Output (Reusing Tabular Grid Layout)
+        if len(matches) == 0:
+            print("\n[Notice] Zero search matches identified for that query parameter.")
+        else:
+            print("\n=======================================================================")
+            print("                         SEARCH RESULTS FOUND                          ")
+            print("=======================================================================")
+            header_str = f"{'No.':<5}│ {'Date':<12}│ {'Category':<15}│ {'Description':<25}│ {'Amount':>12}"
+            print(header_str)
+            print("─────┼─────────────┼────────────────┼──────────────────────────┼────────────")
+            count = 1
+            for item in matches:
+                desc = item['Description']
+                if len(desc) > 23: desc = desc[:20] + "..."
+                print(f"{count:<5}│ {item['Date']:<12}│ {item['Category']:<15}│ {desc:<25}│ Rs.{item['Amount']:>9.2f}")
+                count += 1
+            print("=======================================================================")
+            print(f"[Query Status] {len(matches)} matching logs isolated successfully.")
+
+#  VIEW EXPENSE ANALYTICS:
+    elif choice == 5:
         # Edge-case check to prevent math crashes on empty data sets
         if len(ExpensesList) == 0:
             print("\n[Notice] No data available to calculate analytics. Try adding an expense first!")
@@ -182,7 +251,7 @@ while True:
         print("==================================================")
 
 # BUDGET MANAGEMENT WORKSPACE
-    elif choice == 5:
+    elif choice == 6:
         print("\n==================================================")
         print("                BUDGET MANAGEMENT                 ")
         print("==================================================")
@@ -244,7 +313,7 @@ while True:
             print("[Error] Invalid option selected. Returning to menu.")
 
 # REPORTING SYSTEM WORKSPACE (Filter & File Export Layout)
-    elif choice == 6:
+    elif choice == 7:
         if len(ExpensesList) == 0:
             print("\n[Notice] No data logs found. Add an expense first to build a report.")
             continue
@@ -327,7 +396,7 @@ while True:
                 print("\n[Error] System disk block error! Unable to write external file.")
 
 #  EXIT
-    elif choice == 7:
+    elif choice == 8:
         print("\nThank You For Using Expense Tracker. Goodbye!")
         break
         
