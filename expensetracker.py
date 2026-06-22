@@ -1,404 +1,309 @@
 # Expense Tracker
-import os
 import json
+import os
 
-EXPENSES_FILE = "expenses.json"
-BUDGET_FILE = "budget.json"
+class Expense:
+    """Models a single individual expense entry."""
+    def __init__(self, date: str, category: str, description: str, amount: float):
+        self.date = date
+        self.category = category.strip().lower()
+        self.description = description if description else "No Description"
+        self.amount = amount
 
-ExpensesList=[]
-monthly_budget = 0.0
+    def to_dict(self) -> dict:
+        """Converts object instance data back to dictionary format for JSON saving."""
+        return {
+            "Date": self.date,
+            "Category": self.category,
+            "Description": self.description,
+            "Amount": self.amount
+        }
 
-print("=======================================================================")
-print("                      Welcome to Expense Tracker                       ")
-print("=======================================================================")
 
-# --- STARTUP PERSISTENCE ENGINE ---
-# Check if the data file exists on disk
-if not os.path.exists(EXPENSES_FILE):
-    print(f"[Notice] No data file found. Creating a fresh storage workspace.")
-    ExpensesList = []
-else:
-    # Try loading the existing data, protecting against file corruption
-    try:
-        with open(EXPENSES_FILE, "r") as file:
-            ExpensesList = json.load(file)
-        print(f"[Success] Loaded {len(ExpensesList)} data records from storage.")
-    except json.JSONDecodeError:
-        print("\n===============================================================")
-        print("[CRITICAL WARNING] 'expenses.json' is corrupted or unreadable!")
-        print("To protect the session, the program will load an empty tracker.")
-        print("===============================================================")
-        ExpensesList = []
+class BudgetEngine:
+    """Manages budget thresholds, limit updates, and progress layouts."""
+    def __init__(self, budget_file: str = "budget.json"):
+        self.budget_file = budget_file
+        self.monthly_limit = 5000.0
+        self.load_budget()
 
-# Load Budget Configuration (Companion Storage)
-if not os.path.exists(BUDGET_FILE):
-    # Set a default starting budget of Rs. 5000.00 if no file exists yet
-    monthly_budget = 5000.0
-    with open(BUDGET_FILE, "w") as file:
-        json.dump({"monthly_budget": monthly_budget}, file)
-else:
-    try:
-        with open(BUDGET_FILE, "r") as file:
-            config = json.load(file)
-            monthly_budget = config.get("monthly_budget", 5000.0)
-    except json.JSONDecodeError:
-        monthly_budget = 5000.0
+    def load_budget(self):
+        if not os.path.exists(self.budget_file):
+            self.save_budget()
+        else:
+            try:
+                with open(self.budget_file, "r") as file:
+                    config = json.load(file)
+                    self.monthly_limit = config.get("monthly_budget", 5000.0)
+            except json.JSONDecodeError:
+                self.monthly_limit = 5000.0
 
-# --- MAIN APPLICATION LOOP ---
-while True:
-    print("====MENU====")
-    print("1.Add Expense")
-    print("2.View All Expenses")
-    print("3.View Total Spending")
-    print("4.Advanced Search & Filter <-- [NEW]")
-    print("5.View Expense Analytics")
-    print("6.Budget Management")
-    print("7.Reporting System")
-    print("8.Exit")
-    print("===============")
-    
-    # Secure Choice Validation
-    raw_choice = input("Please Enter Your Choice: ").strip()
-    
-    if not raw_choice.isdigit():
-        print("\n[Error] Invalid Input! Please enter a number (1-8).")
-        continue
+    def save_budget(self):
+        with open(self.budget_file, "w") as file:
+            json.dump({"monthly_budget": self.monthly_limit}, file)
+
+    def update_limit(self, new_limit: float):
+        self.monthly_limit = new_limit
+        self.save_budget()
+
+    def display_dashboard(self, total_spent: float):
+        remaining = self.monthly_limit - total_spent
+        usage_pct = (total_spent / self.monthly_limit) * 100 if self.monthly_limit > 0 else 0
+        bar_blocks = min(int(usage_pct // 10), 10)
+        progress_bar = "█" * bar_blocks + "░" * (10 - bar_blocks)
         
-    choice = int(raw_choice)
+        if total_spent >= self.monthly_limit:
+            alert_status = "[⚠️ CRITICAL OVERSPEND] Lower your costs immediately!"
+        elif total_spent >= (self.monthly_limit * 0.8):
+            alert_status = "[⚠️ SYSTEM WARNING] You are nearing your allowance threshold."
+        else:
+            alert_status = "[✅ SAFE STATUS] Your spending patterns are stable."
 
-# ADD EXPENSE (With Proactive Budget Warnings)
-    if choice == 1:
+        print("\n Current Configuration:")
+        print(" ──────────────────────")
+        print(f" • Monthly Budget Limit  : Rs.{self.monthly_limit:.2f}")
+        print(f" • Total Amount Spent    : Rs.{total_spent:.2f}")
+        print(f" • Remaining Allowance   : Rs.{remaining:.2f}")
+        print("\n Usage Analysis:")
+        print(" ───────────────")
+        print(f" • Budget Usage Progress : [{progress_bar}] {usage_pct:.2f}%")
+        print(f" • System Alert Status   : {alert_status}")
+
+
+class ExpenseTrackerApp:
+    """Core orchestration engine matching your original operational feature requirements."""
+    def __init__(self, expense_file: str = "expenses.json"):
+        self.expense_file = expense_file
+        self.expenses_list = []
+        self.budget_manager = BudgetEngine()
+        self.load_expenses()
+
+    def load_expenses(self):
+        if os.path.exists(self.expense_file):
+            try:
+                with open(self.expense_file, "r") as file:
+                    raw_data = json.load(file)
+                    # Hydrate dictionaries out of flat list back into Expense Objects
+                    self.expenses_list = [
+                        Expense(item["Date"], item["Category"], item["Description"], item["Amount"])
+                        for item in raw_data
+                    ]
+                print(f"[Success] Loaded {len(self.expenses_list)} data records from storage.")
+            except (json.JSONDecodeError, KeyError):
+                print("\n[CRITICAL WARNING] 'expenses.json' data is corrupted! Starting fresh.")
+                self.expenses_list = []
+
+    def save_expenses(self):
+        with open(self.expense_file, "w") as file:
+            # Flatten Expense objects into serializable standard dictionary maps
+            serializable_list = [exp.to_dict() for exp in self.expenses_list]
+            json.dump(serializable_list, file, indent=4)
+
+    def get_total_spending(self) -> float:
+        return sum(exp.amount for exp in self.expenses_list)
+
+    def print_tabular_grid(self, target_list: list):
+        print("\n=======================================================================")
+        header_str = f"{'No.':<5}│ {'Date':<12}│ {'Category':<15}│ {'Description':<25}│ {'Amount':>12}"
+        print(header_str)
+        print("─────┼─────────────┼────────────────┼──────────────────────────┼────────────")
+        count = 1
+        for exp in target_list:
+            desc = exp.description
+            if len(desc) > 23: desc = desc[:20] + "..."
+            print(f"{count:<5}│ {exp.date:<12}│ {exp.category:<15}│ {desc:<25}│ Rs.{exp.amount:>9.2f}")
+            count += 1
+        print("=======================================================================")
+
+    def add_new_expense(self):
         print("\n--- Add New Expense ---")
-        Date = input("Enter The Date on which you spent (YYYY-MM-DD): ").strip()
-        Category = input("What Type of expense you've made: ").strip().lower()
+        date = input("Enter The Date on which you spent (YYYY-MM-DD): ").strip()
+        category = input("What Type of expense you've made: ").strip()
+        description = input("Describe your spending (optional): ").strip()
         
-        Description = input("Describe your spending (optional): ").strip()
-        if not Description:
-            Description = "No Description"
-            
         while True:
             raw_amount = input("How much you've spent: Rs.").strip()
             try:
-                Amount = float(raw_amount)
-                if Amount <= 0:
-                    print("[Error] Amount must be greater than zero. Please try again.")
+                amount = float(raw_amount)
+                if amount <= 0:
+                    print("[Error] Amount must be greater than zero.")
                     continue
                 break
             except ValueError:
                 print("[Error] Invalid amount! Please enter a valid decimal number.")
 
-        expense = {
-            "Date": Date,
-            "Category": Category,
-            "Description": Description,
-            "Amount": Amount
-        }
-        ExpensesList.append(expense)
-        
-        # Save updated data list
-        with open(EXPENSES_FILE, "w") as file:
-            json.dump(ExpensesList, file, indent=4)
-            
+        # Create our new instance entry object wrapper
+        new_expense = Expense(date, category, description, amount)
+        self.expenses_list.append(new_expense)
+        self.save_expenses()
         print("\n>> Expense Added Successfully! <<")
         
-        # Proactive Alert Evaluation Immediately Upon Entry Creation
-        total_spent = sum(item["Amount"] for item in ExpensesList)
-        if total_spent >= monthly_budget:
-            print(f"\n[⚠️ CRITICAL ALERT] You have officially OVERSPENT! Total: Rs.{total_spent:.2f} / Limit: Rs.{monthly_budget:.2f}")
-        elif total_spent >= (monthly_budget * 0.8):
-            print(f"\n[⚠️ BUDGET WARNING] Caution! You have used over 80% of your allowance. Spent: Rs.{total_spent:.2f}")
+        total = self.get_total_spending()
+        if total >= self.budget_manager.monthly_limit:
+            print(f"\n[⚠️ CRITICAL ALERT] You have OVERSPENT! Total: Rs.{total:.2f} / Limit: Rs.{self.budget_manager.monthly_limit:.2f}")
+        elif total >= (self.budget_manager.monthly_limit * 0.8):
+            print(f"\n[⚠️ BUDGET WARNING] Caution! You have used over 80% of your allowance. Spent: Rs.{total:.2f}")
 
-
-# VIEW YOUR EXPENSES (Tabular Grid System)
-    elif choice == 2:
-        if len(ExpensesList) == 0:
-            print("\n[Notice] No Expenses recorded yet.")
-        else:
-            print("\n=======================================================================")
-            print("                            YOUR EXPENSES                              ")
-            print("=======================================================================")
-            
-            # Print Table Header
-            header_str = f"{'No.':<5}│ {'Date':<12}│ {'Category':<15}│ {'Description':<25}│ {'Amount':>12}"
-            print(header_str)
-            print("─────┼─────────────┼────────────────┼──────────────────────────┼────────────")
-            
-            # Print Table Rows
-            count = 1
-            for EachExpense in ExpensesList:
-                # Clip description string if it's too long to prevent text wrapping breaks
-                desc = EachExpense['Description']
-                if len(desc) > 23:
-                    desc = desc[:20] + "..."
-                    
-                print(f"{count:<5}│ {EachExpense['Date']:<12}│ {EachExpense['Category']:<15}│ {desc:<25}│ Rs.{EachExpense['Amount']:>9.2f}")
-                count += 1
-                
-            print("=======================================================================")
-   
-
-#  VIEW TOTAL SPENDINGS
-    elif choice == 3:
-        total = sum(item["Amount"] for item in ExpensesList)
-        print(f"\n========================================\n Total Spendings: Rs.{total:.2f}\n========================================")
-
-# ADVANCED SEARCH & FILTERING (Multi-Query Engine Layout)
-    elif choice == 4:
-        if len(ExpensesList) == 0:
+    def run_search_engine(self):
+        if not self.expenses_list:
             print("\n[Notice] Tracker is empty. Add entries first before filtering.")
-            continue
-            
+            return
         print("\n==================================================")
         print("            ADVANCED SEARCH ENGINE                ")
         print("==================================================")
-        print("1. Search By Specific Category")
-        print("2. Search By Description Keyword Sieve")
-        print("3. Search By Custom Amount Range Window")
+        print("1. Search By Specific Category\n2. Search By Description Keyword\n3. Search By Custom Amount Range")
         search_type = input("\nSelect a search query pattern (1-3): ").strip()
-        
         matches = []
-        
-        # 4.1 Category Match Pattern
+
         if search_type == "1":
-            target_cat = input("Enter target category name to match: ").strip().lower()
-            for item in ExpensesList:
-                if item["Category"] == target_cat:
-                    matches.append(item)
-                    
-        # 4.2 Loose Substring Keyword Pattern
+            target_cat = input("Enter target category: ").strip().lower()
+            matches = [exp for exp in self.expenses_list if exp.category == target_cat]
         elif search_type == "2":
-            keyword = input("Enter keyword or phrase to scan for: ").strip().lower()
-            for item in ExpensesList:
-                if keyword in item["Description"].lower():
-                    matches.append(item)
-                    
-        # 4.3 Secure Decimal Bounds Evaluation
+            keyword = input("Enter keyword phrase: ").strip().lower()
+            matches = [exp for exp in self.expenses_list if keyword in exp.description.lower()]
         elif search_type == "3":
             try:
-                min_amt = float(input("Enter minimum threshold amount: Rs.").strip())
-                max_amt = float(input("Enter maximum threshold amount: Rs.").strip())
-                if min_amt > max_amt:
-                    print("[Notice] Swapping values automatically to fix range order bounds.")
-                    min_amt, max_amt = max_amt, min_amt
-                    
-                for item in ExpensesList:
-                    if min_amt <= item["Amount"] <= max_amt:
-                        matches.append(item)
+                min_amt = float(input("Enter minimum: Rs.").strip())
+                max_amt = float(input("Enter maximum: Rs.").strip())
+                if min_amt > max_amt: min_amt, max_amt = max_amt, min_amt
+                matches = [exp for exp in self.expenses_list if min_amt <= exp.amount <= max_amt]
             except ValueError:
-                print("[Error] Invalid entry! Input numeric values only for range thresholds.")
-                continue
+                print("[Error] Invalid entry! Inputs must be numeric values.")
+                return
         else:
-            print("[Error] Unknown query parameter strategy selected.")
-            continue
+            print("[Error] Unknown query strategy selection.")
+            return
 
-        # Render Search Grid Output (Reusing Tabular Grid Layout)
-        if len(matches) == 0:
-            print("\n[Notice] Zero search matches identified for that query parameter.")
+        if not matches:
+            print("\n[Notice] Zero search matches identified for that query.")
         else:
-            print("\n=======================================================================")
-            print("                         SEARCH RESULTS FOUND                          ")
-            print("=======================================================================")
-            header_str = f"{'No.':<5}│ {'Date':<12}│ {'Category':<15}│ {'Description':<25}│ {'Amount':>12}"
-            print(header_str)
-            print("─────┼─────────────┼────────────────┼──────────────────────────┼────────────")
-            count = 1
-            for item in matches:
-                desc = item['Description']
-                if len(desc) > 23: desc = desc[:20] + "..."
-                print(f"{count:<5}│ {item['Date']:<12}│ {item['Category']:<15}│ {desc:<25}│ Rs.{item['Amount']:>9.2f}")
-                count += 1
-            print("=======================================================================")
-            print(f"[Query Status] {len(matches)} matching logs isolated successfully.")
+            self.print_tabular_grid(matches)
 
-#  VIEW EXPENSE ANALYTICS:
-    elif choice == 5:
-        # Edge-case check to prevent math crashes on empty data sets
-        if len(ExpensesList) == 0:
-            print("\n[Notice] No data available to calculate analytics. Try adding an expense first!")
-            continue
-            
+    def view_analytics_dashboard(self):
+        if not self.expenses_list:
+            print("\n[Notice] No data available to calculate analytics.")
+            return
         print("\n==================================================")
-        print("                EXPENSE ANALYTICS                   ")
-        print("====================================================")
-        total_spending = sum(item["Amount"] for item in ExpensesList)
-        total_count = len(ExpensesList)
-        highest_expense = max(ExpensesList, key=lambda x: x["Amount"])
-        lowest_expense = min(ExpensesList, key=lambda x: x["Amount"])
+        print("                EXPENSE ANALYTICS                 ")
+        print("==================================================")
+        total_spending = self.get_total_spending()
+        total_count = len(self.expenses_list)
+        highest = max(self.expenses_list, key=lambda x: x.amount)
+        lowest = min(self.expenses_list, key=lambda x: x.amount)
         
         category_totals = {}
-        
-        for item in ExpensesList:
-            category_totals[item["Category"]] = category_totals.get(item["Category"], 0.0) + item["Amount"]
-        
-        
-        # --- PRESENTATION RENDER ---
-        print(" Metrics Summary:")
-        print(" ────────────────")
+        for exp in self.expenses_list:
+            category_totals[exp.category] = category_totals.get(exp.category, 0.0) + exp.amount
+
         print(f" • Total Spending        : Rs.{total_spending:.2f}")
         print(f" • Total No. of Expenses : {total_count} records")
         print(f" • Average Expense Cost  : Rs.{(total_spending / total_count):.2f}")
-        
-        print("\n Extremes:")
-        print(" ─────────")
-        print(f" • Highest Single Spend  : Rs.{highest_expense['Amount']:.2f} ({highest_expense['Category']})")
-        print(f" • Lowest Single Spend   : Rs.{lowest_expense['Amount']:.2f} ({lowest_expense['Category']})")
-        
+        print(f"\n Highest Single Spend  : Rs.{highest.amount:.2f} ({highest.category})")
+        print(f" Lowest Single Spend   : Rs.{lowest.amount:.2f} ({lowest.category})")
         print("\n Category-Wise Breakdown:")
-        print(" ────────────────────────")
-        for cat_name, cat_total in category_totals.items():
-            print(f" ■ {cat_name:<21} : Rs.{cat_total:>9.2f}")
-            
+        for cat, amt in category_totals.items():
+            print(f" ■ {cat:<21} : Rs.{amt:>9.2f}")
         print("==================================================")
 
-# BUDGET MANAGEMENT WORKSPACE
-    elif choice == 6:
+    def handle_budget_menu(self):
         print("\n==================================================")
         print("                BUDGET MANAGEMENT                 ")
         print("==================================================")
-        print(f" 1. View Budget Status Dashboard")
-        print(f" 2. Update Monthly Limit Target")
-        sub_choice = input("\nSelect a budget operation sub-choice (1-2): ").strip()
-        
-        # Sub-Option 1: View Progress Bar and Threshold Status
-        if sub_choice == "1":
-            total_spent = sum(item["Amount"] for item in ExpensesList)
-            remaining_allowance = monthly_budget - total_spent
-            
-            # Calculate metrics safely
-            usage_pct = (total_spent / monthly_budget) * 100 if monthly_budget > 0 else 0
-            
-            # Dynamic text progress bar logic (scaled down to 10 block increments)
-            bar_blocks = min(int(usage_pct // 10), 10)
-            progress_bar = "█" * bar_blocks + "░" * (10 - bar_blocks)
-            
-            # Determine alert flags
-            if total_spent >= monthly_budget:
-                alert_status = "[⚠️ CRITICAL OVERSPEND] Lower your costs immediately!"
-            elif total_spent >= (monthly_budget * 0.8):
-                alert_status = "[⚠️ SYSTEM WARNING] You are nearing your allowance threshold."
-            else:
-                alert_status = "[✅ SAFE STATUS] Your spending patterns are stable."
-                
-            print("\n Current Configuration:")
-            print(" ──────────────────────")
-            print(f" • Monthly Budget Limit  : Rs.{monthly_budget:.2f}")
-            print(f" • Total Amount Spent    : Rs.{total_spent:.2f}")
-            print(f" • Remaining Allowance   : Rs.{remaining_allowance:.2f}")
-            print("\n Usage Analysis:")
-            print(" ───────────────")
-            print(f" • Budget Usage Progress : [{progress_bar}] {usage_pct:.2f}%")
-            print(f" • System Alert Status   : {alert_status}")
-            print("==================================================")
-            
-        # Sub-Option 2: Dynamically re-configure limits
-        elif sub_choice == "2":
-            while True:
-                raw_new_budget = input(f"Current limit is Rs.{monthly_budget:.2f}. Enter new limit: Rs.").strip()
-                try:
-                    new_budget = float(raw_new_budget)
-                    if new_budget <= 0:
-                        print("[Error] Target limit must be greater than zero.")
-                        continue
-                    monthly_budget = new_budget
-                    
-                    # Update local state file record
-                    with open(BUDGET_FILE, "w") as file:
-                        json.dump({"monthly_budget": monthly_budget}, file)
-                        
-                    print(f"\n>> Success! Monthly budget updated to Rs.{monthly_budget:.2f} <<")
-                    break
-                except ValueError:
-                    print("[Error] Please enter a valid decimal number.")
-        else:
-            print("[Error] Invalid option selected. Returning to menu.")
+        print("1. View Budget Status Dashboard\n2. Update Monthly Limit Target")
+        sub = input("\nSelect an option (1-2): ").strip()
+        if sub == "1":
+            self.budget_manager.display_dashboard(self.get_total_spending())
+        elif sub == "2":
+            try:
+                new_limit = float(input("Enter new limit: Rs.").strip())
+                if new_limit <= 0: raise ValueError
+                self.budget_manager.update_limit(new_limit)
+                print(f">> Success! Budget updated to Rs.{new_limit:.2f} <<")
+            except ValueError:
+                print("[Error] Invalid configuration input value.")
 
-# REPORTING SYSTEM WORKSPACE (Filter & File Export Layout)
-    elif choice == 7:
-        if len(ExpensesList) == 0:
-            print("\n[Notice] No data logs found. Add an expense first to build a report.")
-            continue
-            
-        print("\n==================================================")
-        print("                 REPORTING SYSTEM                 ")
-        print("==================================================")
-        print("1. Generate Daily Report")
-        print("2. Generate Monthly Report")
-        report_type = input("\nSelect report filter type (1-2): ").strip()
-        
-        filtered_expenses = []
-        target_label = ""
-        report_title = ""
-        
-        # Choice 6.1: Daily Extraction Slicer
+    def generate_reports(self):
+        if not self.expenses_list:
+            print("\n[Notice] No data logs found.")
+            return
+        print("\n1. Generate Daily Report\n2. Generate Monthly Report")
+        report_type = input("\nSelect report type (1-2): ").strip()
+        filtered, label, title = [], "", ""
+
         if report_type == "1":
-            target_label = input("Enter target date to filter (YYYY-MM-DD): ").strip()
-            report_title = "DAILY EXPENSE REPORT"
-            for item in ExpensesList:
-                if item["Date"] == target_label:
-                    filtered_expenses.append(item)
-                    
-        # Choice 6.2: Monthly Extraction Slicer (Grabs first 7 chars: "YYYY-MM")
+            label = input("Enter date (YYYY-MM-DD): ").strip()
+            title = "DAILY EXPENSE REPORT"
+            filtered = [exp for exp in self.expenses_list if exp.date == label]
         elif report_type == "2":
-            target_label = input("Enter target month to filter (YYYY-MM): ").strip()
-            report_title = "MONTHLY EXPENSE REPORT"
-            for item in ExpensesList:
-                if item["Date"][:7] == target_label:
-                    filtered_expenses.append(item)
+            label = input("Enter month (YYYY-MM): ").strip()
+            title = "MONTHLY EXPENSE REPORT"
+            filtered = [exp for exp in self.expenses_list if exp.date[:7] == label]
         else:
-            print("[Error] Invalid option. Returning to core menu loop.")
-            continue
+            return
 
-        # Process filtered results
-        if len(filtered_expenses) == 0:
-            print(f"\n[Notice] No database matches found for target window: {target_label}")
-            continue
-            
-        # Compile Report Text Layout using a text lines buffer string
-        report_output = []
-        report_output.append("==================================================")
-        report_output.append(f"              {report_title}               ")
-        report_output.append("==================================================")
-        report_output.append(f" Target Window        : {target_label}")
-        report_output.append(f" Total Items Matched  : {len(filtered_expenses)} records")
-        report_output.append("──────────────────────────────────────────────────")
-        
+        if not filtered:
+            print(f"\n[Notice] Zero entries found matching: {label}")
+            return
+
+        report_output = [
+            "==================================================",
+            f"              {title}               ",
+            "==================================================",
+            f" Target Window        : {label}",
+            f" Total Items Matched  : {len(filtered)} records",
+            "──────────────────────────────────────────────────"
+        ]
         period_total = 0.0
         cat_breakdown = {}
-        
-        # Aggregate the period metrics
-        for item in filtered_expenses:
-            period_total += item["Amount"]
-            cat_breakdown[item["Category"]] = cat_breakdown.get(item["Category"], 0.0) + item["Amount"]
-            report_output.append(f" • [{item['Date']}] {item['Category']:<10} | {item['Description']:<15} : Rs.{item['Amount']:>8.2f}")
+        for exp in filtered:
+            period_total += exp.amount
+            cat_breakdown[exp.category] = cat_breakdown.get(exp.category, 0.0) + exp.amount
+            report_output.append(f" • [{exp.date}] {exp.category:<10} : Rs.{exp.amount:>8.2f}")
             
         report_output.append("──────────────────────────────────────────────────")
-        report_output.append(" Category Summary Breakdown:")
-        for cat, total_amt in cat_breakdown.items():
-            report_output.append(f"   ■ {cat:<15} : Rs.{total_amt:>8.2f}")
+        for cat, amt in cat_breakdown.items():
+            report_output.append(f"   ■ {cat:<15} : Rs.{amt:>8.2f}")
         report_output.append("──────────────────────────────────────────────────")
         report_output.append(f" TOTAL PERIOD SPEND   : Rs.{period_total:.2f}")
         report_output.append("==================================================\n")
         
-        # Render Compiled Text Report straight to the screen terminal layout
-        final_report_text = "\n".join(report_output)
-        print(final_report_text)
+        final_text = "\n".join(report_output)
+        print(final_text)
         
-        # --- THE EXPORT HOOK ---
-        export_choice = input("Would you like to export this report to a text file? (y/n): ").strip().lower()
-        if export_choice == "y":
-            # Sanitize a safe clean filename string based on user filter parameters
-            safe_filename = f"report_{target_label.replace('-', '_')}.txt"
-            try:
-                with open(safe_filename, "w", encoding="utf-8") as file:
-                    file.write(final_report_text)
-                print(f"\n[Export Success] Report successfully written onto disk as '{safe_filename}'!")
-            except IOError:
-                print("\n[Error] System disk block error! Unable to write external file.")
+        if input("Export report to a text file? (y/n): ").strip().lower() == "y":
+            filename = f"report_{label.replace('-', '_')}.txt"
+            with open(filename, "w", encoding="utf-8") as file:
+                file.write(final_text)
+            print(f"[Export Success] Saved as '{filename}'!")
 
-#  EXIT
-    elif choice == 8:
-        print("\nThank You For Using Expense Tracker. Goodbye!")
-        break
-        
-    else:
-        print("\n[Error] Invalid Choice!! Please select an option between 1 and 4.")
+    def start_main_loop(self):
+        while True:
+            print("\n==== MENU ====")
+            print("1. Add Expense\n2. View All Expenses\n3. View Total Spending\n4. Advanced Search & Filter")
+            print("5. View Expense Analytics\n6. Budget Management\n7. Reporting System\n8. Exit")
+            print("===============")
+            raw_choice = input("Please Enter Your Choice: ").strip()
+            if not raw_choice.isdigit():
+                print("\n[Error] Invalid choice! Input a number (1-8).")
+                continue
+            choice = int(raw_choice)
+            
+            if choice == 1: self.add_new_expense()
+            elif choice == 2: 
+                if not self.expenses_list: print("\n[Notice] No records yet.")
+                else: self.print_tabular_grid(self.expenses_list)
+            elif choice == 3: print(f"\n========================================\n Total Spendings: Rs.{self.get_total_spending():.2f}\n========================================")
+            elif choice == 4: self.run_search_engine()
+            elif choice == 5: self.view_analytics_dashboard()
+            elif choice == 6: self.handle_budget_menu()
+            elif choice == 7: self.generate_reports()
+            elif choice == 8:
+                print("\nThank You For Using Expense Tracker. Goodbye!")
+                break
+            else:
+                print("\n[Error] Unknown menu navigation option selection.")
+
+# --- APPLICATION ENTRY POINT EXECUTION ---
+if __name__ == "__main__":
+    app = ExpenseTrackerApp()
+    app.start_main_loop()
