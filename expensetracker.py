@@ -285,13 +285,60 @@ class ExpenseTrackerApp:
             self.save_recurring_templates()
             print(f"\n>> Success! Scheduled automated template for '{desc}' registered onto disk. <<")
 
+    def render_visual_charts(self):
+        """NEW METHOD: Processes data and outputs proportional character bars."""
+        if not self.expenses_list:
+            print("\n[Notice] Visual core charts empty. Add tracking logs first.")
+            return
+
+        print("\n==================================================")
+        print("               VISUAL SPENDING TRENDS             ")
+        print("==================================================")
+        
+        grand_total = self.get_total_spending()
+        
+        # Aggregate category data balances
+        category_totals = {}
+        for exp in self.expenses_list:
+            category_totals[exp.category] = category_totals.get(exp.category, 0.0) + exp.amount
+
+        print(" Category-Wise Comparison Charts:")
+        print(" ────────────────────────────────")
+        
+        # Max horizontal bar width allocation constraints
+        max_bar_width = 20
+        
+        for category, amount in category_totals.items():
+            percentage = (amount / grand_total) * 100 if grand_total > 0 else 0
+            
+            # Proportional graph block sizing computation
+            filled_blocks = int((amount / grand_total) * max_bar_width) if grand_total > 0 else 0
+            empty_blocks = max_bar_width - filled_blocks
+            
+            chart_bar = "█" * filled_blocks + "░" * empty_blocks
+            print(f" ■ {category:<12} [{chart_bar}] {percentage:>6.1f}% (Rs.{amount:.2f})")
+            # ADDED: This line prints a clean separator right below each category bar
+            print(" ────────────────────────────────")    
+        
+        
+        # Render a complementary quick-view budget overview status bar link
+        limit = self.budget_manager.monthly_limit
+        budget_pct = (grand_total / limit) * 100 if limit > 0 else 0
+        budget_filled = min(int(budget_pct / 10), 10)
+        budget_bar = "█" * budget_filled + "░" * (10 - budget_filled)
+        
+        print("\n Budget Progress Usage Bar:")
+        print(" ──────────────────────────")
+        print(f" • Allowance [{budget_bar}] {budget_pct:.1f}% Used")
+        print("==================================================")
+
     def start_main_loop(self):
         while True:
             print("\n==== MENU ====")
             print("1. Add Expense\n2. View All Expenses\n3. View Total Spending\n4. Advanced Search & Filter")
-            print("5. View Expense Analytics\n6. Budget Management\n7. Reporting System")
-            print("8. Recurring Subscriptions <-- [NEW]\n9. Exit")
-            print("===============")
+            print("5. View Expense Analytics\n6. Budget Management\n7. Reporting System\n8. Recurring Subscriptions")
+            print("9. Visual Spending Trends <-- [NEW]\n10. Exit")
+            print("=================")
             raw_choice = input("Please Enter Your Choice: ").strip()
             if not raw_choice.isdigit(): continue
             choice = int(raw_choice)
@@ -304,7 +351,8 @@ class ExpenseTrackerApp:
             elif choice == 6: self.handle_budget_menu()
             elif choice == 7: self.generate_reports()
             elif choice == 8: self.handle_recurring_workspace()
-            elif choice == 9:
+            elif choice == 9: self.render_visual_charts()
+            elif choice == 10:
                 print("\nThank You For Using Expense Tracker. Goodbye!")
                 break
             else:
