@@ -198,6 +198,12 @@ class ExpenseTrackerApp:
         category = input("Enter Category: ").strip()
         description = input("Enter Description: ").strip()
         
+        # --- DATETIME TIMESTAMPER INTERACTION LAYER ---
+        # Captures the live system clock time right now (e.g., 15:24:07)
+        live_time = datetime.datetime.now().strftime("%H:%M:%S")
+        # Appends the timestamp seamlessly onto the end of your description string
+        stamped_description = f"{description} (Logged at {live_time})"
+
         while True:
             try:
                 amount = float(input("Enter Amount: Rs.").strip())
@@ -206,7 +212,7 @@ class ExpenseTrackerApp:
             except ValueError:
                 print("[Error] Amount entry must be a positive number.")
 
-        self.expenses_list.append(Expense(date, category, description, amount))
+        self.expenses_list.append(Expense(date, category, description, amount,stamped_description))
         self.save_master_database()
         print("\n>> Expense Registered & Master Configuration updated! <<")
 
