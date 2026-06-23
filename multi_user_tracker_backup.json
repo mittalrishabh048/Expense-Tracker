@@ -1,0 +1,31 @@
+{
+    "rishabh": {
+        "monthly_budget": 200000.0,
+        "expenses": [
+            {
+                "Date": "2026-06-05",
+                "Category": "other",
+                "Description": "No Description",
+                "Amount": 5000.0
+            },
+            {
+                "Date": "2026-05-21",
+                "Category": "fees",
+                "Description": "No Description",
+                "Amount": 60000.0
+            },
+            {
+                "Date": "2026-06-04",
+                "Category": "shopping",
+                "Description": "bought new phone",
+                "Amount": 22000.0
+            }
+        ],
+        "recurring_templates": []
+    },
+    "rajat": {
+        "monthly_budget": 5000.0,
+        "expenses": [],
+        "recurring_templates": []
+    }
+}
